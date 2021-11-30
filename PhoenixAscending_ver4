@@ -1,0 +1,78 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// authors: @LazyBear @xSilas @Ni6HTH4wK ©WyckoffMode @HedgeMode
+
+//@version=4
+title = "Phoenix Ascending"
+stitle = ""
+version = " 2.201 (realtime)"
+study(title = title + version, shorttitle = stitle, overlay = false)
+
+// Sources:
+src0 = (open), src1 = (high), src2 = (low),  src3 = (close)
+src4 = (hl2),  src5 = (hlc3), src6 = (ohlc4), src7 = (tr)
+vol  = (volume)
+
+// Inputs:
+n1 = input(9, "Phx master")
+n2 = input(6, "Phx time 1")
+n3 = input(3, "Phx time 2")
+n4 = input(32, "LSMA 1")
+n5 = input(0, "LSMA 1")
+
+// 4 principal components: tci, mf, willy, csi
+tci(src) => ema((src-ema(src, n1)) / (0.025 * ema(abs(src - ema(src, n1)), n1)), n2)+50
+
+mf(src) => rsi(sum(volume * (change(src) <= 0 ? 0 : src), n3), sum(volume * (change(src) >= 0 ? 0 : src), n3))
+
+willy(src) => 60 * (src - highest(src, n2)) / (highest(src, n2) - lowest(src, n2)) +80
+
+csi(src) => avg(rsi(src,n3), tsi(src0,n1,n2)*50+50)
+
+// "Phoenix Ascending" average of tci, csi, mf, willy:
+phoenix(src) => avg(tci(src),csi(src),mf(src), willy(src))
+
+// "Tradition" average of tci, mf, rsi
+tradition(src) => avg(tci(src), mf(src), rsi(src, n3))
+
+wt1 = tradition(src5)
+wt2 = sma(wt1,6)
+
+ext1 = wt2<20 ? wt2+5 : wt2>80 ? wt2-5 : na
+
+// LSMA
+wt3 = linreg(wt1,n4,n5)
+wt4 = ema ((wt1-wt2)*2+50, n3)
+
+// Plots
+
+isBarConfirmed = barstate.isconfirmed
+
+plot(wt1, "Green Line", color = isBarConfirmed ? color.green : color.new(color.green, 50), linewidth = 2)
+plot(wt2, "Red RSI", color = isBarConfirmed ? color.red : color.new(color.red, 50), linewidth = 2)
+plot(wt3, "LSMA", color = isBarConfirmed ? color.blue : color.new(color.blue, 50), linewidth = 2)
+plot(wt4, "Energy", color = isBarConfirmed ? color.gray : color.new(color.gray, 90),    style = plot.style_area,    transp = 70, histbase = 50)
+plot(ext1 ? ext1 : na, "Pressure", color = isBarConfirmed ? color.yellow : color.new(color.yellow, 50),  style = plot.style_circles, linewidth = 2)
+
+
+hline(80, color = color.red, linewidth = 2)
+hline(70, color = color.orange, linewidth = 1)
+hline(56, color = color.green, linewidth = 1)
+hline(50, color = color.silver, linewidth = 2)
+hline(44, color = color.red, linewidth = 1)
+hline(30, color = color.orange, linewidth = 1)
+hline(20, color = color.green, linewidth = 2)
+
+// Optional: Stochastic RSI
+
+dRSI = input(false, "Draw sRSI")
+periodK = input(14, title="K", minval=1)
+periodD = input(3, title="D", minval=1)
+smoothK = input(3, "K", minval=1)
+smoothD = input(3, "D", minval=1)
+lengthRSI = input(14, "RSI Length", minval=1)
+lengthStoch = input(14, "Stochastic Length", minval=1)
+rsi1 = rsi(close, lengthRSI)
+k = sma(stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = sma(k, smoothD)
+plot(dRSI ? k : na, "K", color=isBarConfirmed ? #f5f114 : color.new(#f5f114, 50))
+plot(dRSI ? d : na, "D", color=isBarConfirmed ? #e314a8 : color.new(#e314a8, 50))
